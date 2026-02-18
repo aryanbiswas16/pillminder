@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Accessibility-focused base styles */
+@layer base {
+  html {
+    font-size: 18px; /* Larger base font for elderly users */
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-4 ring-blue-400 ring-opacity-50;
+  }
+
+  /* Large touch targets */
+  button, a {
+    @apply min-h-[48px] min-w-[48px];
+  }
+}
+
+@layer components {
+  /* Medication status cards */
+  .med-card {
+    @apply rounded-2xl p-6 shadow-lg transition-all duration-200;
+  }
+  
+  .med-card-taken {
+    @apply bg-green-100 border-4 border-green-500;
+  }
+  
+  .med-card-pending {
+    @apply bg-white border-4 border-gray-200 hover:border-blue-400;
+  }
+  
+  .med-card-missed {
+    @apply bg-red-100 border-4 border-red-500;
+  }
+
+  /* Large touch-friendly buttons */
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl 
+           text-xl shadow-lg transition-all duration-200 
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl 
+           text-xl shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-xl 
+           text-xl shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  /* Status indicators */
+  .status-badge {
+    @apply inline-flex items-center px-4 py-2 rounded-full text-lg font-bold;
+  }
+
+  /* Dashboard cards */
+  .dashboard-card {
+    @apply bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-100;
+  }
+
+  /* Alert styles */
+  .alert-high {
+    @apply bg-red-100 border-l-8 border-red-600 text-red-900;
+  }
+
+  .alert-medium {
+    @apply bg-yellow-100 border-l-8 border-yellow-600 text-yellow-900;
+  }
+
+  .alert-low {
+    @apply bg-green-100 border-l-8 border-green-600 text-green-900;
+  }
+}
+
+/* High contrast mode support */
+.high-contrast {
+  @apply bg-black text-white;
+}
+
+.high-contrast .med-card-taken {
+  @apply bg-green-900 border-green-400;
+}
+
+.high-contrast .med-card-pending {
+  @apply bg-gray-900 border-gray-400;
+}
+
+.high-contrast .med-card-missed {
+  @apply bg-red-900 border-red-400;
+}
