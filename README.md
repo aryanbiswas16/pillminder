@@ -33,7 +33,7 @@ pillminder/
 │   │   ├── hooks/          # Custom React hooks
 │   │   └── utils/          # Helpers and constants
 │   └── public/
-├── backend/           # Node.js + Express + PostgreSQL
+├── backend/           # Node.js + Express + Sequelize (SQLite default, PostgreSQL optional)
 │   ├── src/
 │   │   ├── routes/         # API endpoints
 │   │   ├── models/         # Database models
@@ -45,10 +45,21 @@ pillminder/
 
 ## 🚀 Quick Start
 
+### Windows One-Click Run
+
+From the project root, run:
+
+```powershell
+.\run-app.cmd
+```
+
+This opens backend and frontend in separate terminal windows using `npm.cmd` (works even when PowerShell blocks `npm.ps1`).
+
 ### Prerequisites
 - Node.js 18+
-- PostgreSQL 14+
 - npm or yarn
+
+PostgreSQL is optional. The prototype runs with SQLite by default.
 
 ### Backend Setup
 
@@ -56,9 +67,8 @@ pillminder/
 cd backend
 npm install
 
-# Create .env file
-cp .env.example .env
-# Edit .env with your database credentials
+# Optional: create .env from .env.example
+# (for PostgreSQL, set DB_DIALECT=postgres and DB_* values)
 
 # Run migrations
 npm run migrate
@@ -73,6 +83,12 @@ npm run dev
 cd frontend
 npm install
 npm start
+```
+
+On Windows PowerShell, use `;` to chain commands (not `&&`). Example:
+
+```powershell
+cd backend; npm.cmd run migrate; npm.cmd run dev
 ```
 
 The app will be available at `http://localhost:3000`
@@ -109,7 +125,7 @@ Brenda starts her shift with 15 residents to check. Instead of flipping through 
 
 - **Frontend:** React 18, Tailwind CSS, Socket.io-client
 - **Backend:** Node.js, Express, Socket.io
-- **Database:** PostgreSQL with Sequelize ORM
+- **Database:** SQLite (prototype default) or PostgreSQL with Sequelize ORM
 - **Real-time:** WebSocket for live updates
 - **Authentication:** JWT tokens
 - **Testing:** Jest, React Testing Library
