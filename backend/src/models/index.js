@@ -1,16 +1,47 @@
+const path = require('path');
+const fs = require('fs');
 const { Sequelize, DataTypes } = require('sequelize');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'pillminder',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'password',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  }
+const logging = process.env.NODE_ENV === 'development' ? console.log : false;
+const requestedDialect = process.env.DB_DIALECT;
+const hasPostgresConfig = Boolean(
+  process.env.DATABASE_URL ||
+  (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER)
 );
+
+const usePostgres = requestedDialect === 'postgres' || (!requestedDialect && hasPostgresConfig);
+
+let sequelize;
+
+if (usePostgres) {
+  if (process.env.DATABASE_URL) {
+    sequelize = new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'postgres',
+      logging
+    });
+  } else {
+    sequelize = new Sequelize(
+      process.env.DB_NAME,
+      process.env.DB_USER,
+      process.env.DB_PASSWORD || '',
+      {
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 5432,
+        dialect: 'postgres',
+        logging
+      }
+    );
+  }
+} else {
+  const sqliteStorage = process.env.SQLITE_STORAGE || path.join(__dirname, '../../data/pillminder.sqlite');
+  fs.mkdirSync(path.dirname(sqliteStorage), { recursive: true });
+
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: sqliteStorage,
+    logging
+  });
+}
 
 // User Model
 const User = sequelize.define('User', {
@@ -62,6 +93,9 @@ const User = sequelize.define('User', {
   highContrastMode: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  room: {
+    type: DataTypes.STRING
   }
 }, {
   tableName: 'users',
@@ -258,6 +292,10 @@ User.belongsToMany(User, {
   foreignKey: 'caregiverId',
   otherKey: 'residentId'
 });
+
+// Direct associations on CareRelationship for eager-loading in dashboard queries
+CareRelationship.belongsTo(User, { as: 'patient', foreignKey: 'residentId' });
+CareRelationship.belongsTo(User, { as: 'caregiver', foreignKey: 'caregiverId' });
 
 module.exports = {
   sequelize,

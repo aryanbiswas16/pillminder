@@ -3,6 +3,21 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  safelist: [
+    // Dynamic color classes used in dashboard stats & login role buttons
+    {
+      pattern: /bg-(red|yellow|green|blue|pink)-(50|100|200|400)/,
+    },
+    {
+      pattern: /text-(red|yellow|green|blue|pink)-(600|700|800)/,
+    },
+    {
+      pattern: /border-(red|yellow|green|blue|pink)-(200|400)/,
+    },
+    {
+      pattern: /hover:border-(red|yellow|green|blue|pink)-400/,
+    },
+  ],
   theme: {
     extend: {
       fontSize: {

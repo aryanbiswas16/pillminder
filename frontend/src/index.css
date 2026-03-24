@@ -4,8 +4,12 @@
 
 /* Accessibility-focused base styles */
 @layer base {
+  html, body, #root {
+    height: 100%;
+  }
+
   html {
-    font-size: 18px; /* Larger base font for elderly users */
+    font-size: 15px;
   }
   
   body {
@@ -17,21 +21,55 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Focus styles for accessibility */
+  /* Focus styles for accessibility — WCAG 2.1 visible focus */
   *:focus-visible {
-    @apply outline-none ring-4 ring-blue-400 ring-opacity-50;
+    @apply outline-none ring-4 ring-blue-400 ring-opacity-60;
   }
 
-  /* Large touch targets */
-  button, a {
-    @apply min-h-[48px] min-w-[48px];
+  /* Fitts' Law: generous touch targets for elderly / motor-impaired users */
+  button, a, [role="radio"], [role="button"] {
+    @apply min-h-[64px] min-w-[64px];
   }
+
+  /* Reduce motion for vestibular disorders — WCAG */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Skip-to-content link (screen-reader / keyboard nav) */
+  .sr-skip {
+    @apply absolute -top-16 left-4 z-50 bg-blue-600 text-white font-bold px-6 py-3 rounded-xl;
+    transition: top 0.2s;
+  }
+  .sr-skip:focus {
+    @apply top-4;
+  }
+}
+
+.app-shell-outer {
+  @apply min-h-screen w-full bg-gray-100 flex justify-center md:py-6;
+}
+
+.app-shell {
+  @apply w-full min-h-screen bg-gray-50 md:min-h-0 md:max-w-[390px] md:h-[844px] md:rounded-[2rem] md:shadow-2xl md:overflow-hidden;
+}
+
+.app-shell-scroll {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @layer components {
   /* Medication status cards */
   .med-card {
-    @apply rounded-2xl p-6 shadow-lg transition-all duration-200;
+    @apply rounded-2xl p-3 shadow-sm transition-all duration-200;
   }
   
   .med-card-taken {
@@ -46,21 +84,21 @@
     @apply bg-red-100 border-4 border-red-500;
   }
 
-  /* Large touch-friendly buttons */
+  /* Compact mobile-friendly buttons */
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl 
-           text-xl shadow-lg transition-all duration-200 
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl 
+           text-sm shadow-md transition-all duration-200 
            active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-success {
-    @apply bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl 
-           text-xl shadow-lg transition-all duration-200 active:scale-95;
+    @apply bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl 
+           text-sm shadow-md transition-all duration-200 active:scale-95;
   }
 
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-xl 
-           text-xl shadow-lg transition-all duration-200 active:scale-95;
+    @apply bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl 
+           text-sm shadow-md transition-all duration-200 active:scale-95;
   }
 
   /* Status indicators */
@@ -87,19 +125,64 @@
   }
 }
 
-/* High contrast mode support */
+/* High contrast mode — overrides for bg, text, borders, cards */
 .high-contrast {
-  @apply bg-black text-white;
+  background-color: #000 !important;
+  color: #fff !important;
 }
-
-.high-contrast .med-card-taken {
-  @apply bg-green-900 border-green-400;
+.high-contrast .bg-white,
+.high-contrast .bg-gray-50,
+.high-contrast .bg-gray-100 {
+  background-color: #111 !important;
+  color: #fff !important;
 }
-
-.high-contrast .med-card-pending {
-  @apply bg-gray-900 border-gray-400;
+.high-contrast .bg-blue-50  { background-color: #1a2a3a !important; }
+.high-contrast .bg-green-50,
+.high-contrast .bg-green-100 { background-color: #0a2a0a !important; }
+.high-contrast .bg-red-50,
+.high-contrast .bg-red-100   { background-color: #2a0a0a !important; }
+.high-contrast .bg-yellow-50,
+.high-contrast .bg-yellow-100 { background-color: #2a2000 !important; }
+.high-contrast .text-gray-900 { color: #fff !important; }
+.high-contrast .text-gray-800 { color: #f0f0f0 !important; }
+.high-contrast .text-gray-700 { color: #e0e0e0 !important; }
+.high-contrast .text-gray-600,
+.high-contrast .text-gray-500,
+.high-contrast .text-gray-400 { color: #bbb !important; }
+.high-contrast .text-blue-600,
+.high-contrast .text-blue-700 { color: #60a5fa !important; }
+.high-contrast .text-green-700,
+.high-contrast .text-green-800,
+.high-contrast .text-green-900 { color: #4ade80 !important; }
+.high-contrast .text-red-700,
+.high-contrast .text-red-800,
+.high-contrast .text-red-900  { color: #f87171 !important; }
+.high-contrast .border-gray-200,
+.high-contrast .border-gray-100 { border-color: #444 !important; }
+.high-contrast .border-t-2 { border-top-color: #444 !important; }
+.high-contrast .border-b,
+.high-contrast .border-b-2     { border-bottom-color: #444 !important; }
+.high-contrast nav.bg-white {
+  background-color: #111 !important;
+  border-top-color: #555 !important;
 }
-
-.high-contrast .med-card-missed {
-  @apply bg-red-900 border-red-400;
+.high-contrast .shadow-sm,
+.high-contrast .shadow,
+.high-contrast .shadow-lg { box-shadow: 0 0 0 1px #444 !important; }
+.high-contrast .rounded-2xl.bg-white,
+.high-contrast .rounded-2xl.bg-gray-50 {
+  background-color: #1a1a1a !important;
+  border-color: #444 !important;
 }
+.high-contrast input,
+.high-contrast select,
+.high-contrast textarea {
+  background-color: #222 !important;
+  color: #fff !important;
+  border-color: #666 !important;
+}
+.high-contrast .bg-blue-600 { background-color: #1d4ed8 !important; }
+.high-contrast .bg-blue-600:hover { background-color: #1e40af !important; }
+.high-contrast .med-card-taken  { background-color: #052e16 !important; border-color: #4ade80 !important; }
+.high-contrast .med-card-pending { background-color: #1a1a1a !important; border-color: #9ca3af !important; }
+.high-contrast .med-card-missed  { background-color: #450a0a !important; border-color: #f87171 !important; }

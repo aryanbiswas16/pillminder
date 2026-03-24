@@ -5,74 +5,12 @@ const { Op } = require('sequelize');
 
 const router = express.Router();
 
-// Get caregiver dashboard (for family members)
-router.get('/caregiver', authenticate, authorize('caregiver'), async (req, res) => {
+// Unified staff dashboard — works for both caregiver (family) and nurse (professional)
+router.get('/caregiver', authenticate, authorize('caregiver', 'nurse'), async (req, res) => {
   try {
-    // Get all residents this caregiver manages
-    const relationships = await CareRelationship.findAll({
-      where: { caregiverId: req.user.id },
-      include: [{
-        model: User,
-        as: 'patient',
-        attributes: ['id', 'firstName', 'lastName', 'isActive']
-      }]
-    });
+    const isNurse = req.user.role === 'nurse';
 
-    const dashboard = [];
-
-    for (const rel of relationships) {
-      const resident = rel.patient;
-      
-      // Get today's status
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const todayDoses = await Dose.findAll({
-        where: {
-          residentId: resident.id,
-          scheduledTime: {
-            [Op.gte]: today,
-            [Op.lt]: tomorrow
-          }
-        }
-      });
-
-      const totalDoses = todayDoses.length;
-      const takenDoses = todayDoses.filter(d => d.status === 'taken').length;
-      const missedDoses = todayDoses.filter(d => d.status === 'missed').length;
-      const pendingDoses = todayDoses.filter(d => d.status === 'pending');
-
-      dashboard.push({
-        residentId: resident.id,
-        residentName: `${resident.firstName} ${resident.lastName}`,
-        relationship: rel.relationshipType,
-        todayStatus: {
-          total: totalDoses,
-          taken: takenDoses,
-          missed: missedDoses,
-          pending: pendingDoses.length,
-          adherenceRate: totalDoses > 0 ? Math.round((takenDoses / totalDoses) * 100) : 100
-        },
-        hasAlert: missedDoses > 0 || pendingDoses.some(d => {
-          const scheduledTime = new Date(d.scheduledTime);
-          return scheduledTime < new Date() && d.status === 'pending';
-        })
-      });
-    }
-
-    res.json(dashboard);
-  } catch (error) {
-    console.error('Error fetching caregiver dashboard:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard.' });
-  }
-});
-
-// Get nurse dashboard (for professional caregivers with multiple patients)
-router.get('/nurse', authenticate, authorize('nurse'), async (req, res) => {
-  try {
-    // Get all residents this nurse manages
+    // Get all residents this user manages
     const relationships = await CareRelationship.findAll({
       where: { caregiverId: req.user.id },
       include: [{
@@ -86,8 +24,8 @@ router.get('/nurse', authenticate, authorize('nurse'), async (req, res) => {
 
     for (const rel of relationships) {
       const resident = rel.patient;
-      
-      // Get today's status
+
+      // Get today's doses
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -96,15 +34,9 @@ router.get('/nurse', authenticate, authorize('nurse'), async (req, res) => {
       const todayDoses = await Dose.findAll({
         where: {
           residentId: resident.id,
-          scheduledTime: {
-            [Op.gte]: today,
-            [Op.lt]: tomorrow
-          }
+          scheduledTime: { [Op.gte]: today, [Op.lt]: tomorrow }
         },
-        include: [{
-          model: Medication,
-          attributes: ['name', 'color']
-        }]
+        include: [{ model: Medication, attributes: ['name', 'color'] }]
       });
 
       const totalDoses = todayDoses.length;
@@ -112,55 +44,59 @@ router.get('/nurse', authenticate, authorize('nurse'), async (req, res) => {
       const missedDoses = todayDoses.filter(d => d.status === 'missed');
       const pendingDoses = todayDoses.filter(d => d.status === 'pending');
 
-      // Find overdue doses
       const now = new Date();
-      const overdueDoses = pendingDoses.filter(d => {
-        const scheduledTime = new Date(d.scheduledTime);
-        return scheduledTime < now;
-      });
+      const overdueDoses = pendingDoses.filter(d => new Date(d.scheduledTime) < now);
+
+      const adherenceRate = totalDoses > 0 ? Math.round((takenDoses / totalDoses) * 100) : 100;
 
       dashboard.push({
         residentId: resident.id,
         residentName: `${resident.firstName} ${resident.lastName}`,
+        relationship: rel.relationshipType,
         room: resident.room,
         todayStatus: {
           total: totalDoses,
           taken: takenDoses,
           missed: missedDoses.length,
           pending: pendingDoses.length,
-          overdue: overdueDoses.length
+          overdue: overdueDoses.length,
+          adherenceRate
         },
+        hasAlert: missedDoses.length > 0 || overdueDoses.length > 0,
         missedDoses: missedDoses.map(d => ({
           id: d.id,
-          medicationName: d.Medication.name,
+          medicationName: d.Medication?.name,
           scheduledTime: d.scheduledTime,
-          color: d.Medication.color
+          color: d.Medication?.color
         })),
         overdueDoses: overdueDoses.map(d => ({
           id: d.id,
-          medicationName: d.Medication.name,
+          medicationName: d.Medication?.name,
           scheduledTime: d.scheduledTime,
-          color: d.Medication.color,
+          color: d.Medication?.color,
           minutesOverdue: Math.floor((now - new Date(d.scheduledTime)) / 60000)
-        })),
-        priority: overdueDoses.length > 0 ? 'high' : missedDoses.length > 0 ? 'medium' : 'low'
+        }))
       });
     }
 
-    // Sort by priority (high first, then by room number)
-    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    // Sort: attention-needed first, then alphabetically
     dashboard.sort((a, b) => {
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
-      return (a.room || '').localeCompare(b.room || '');
+      if (a.hasAlert !== b.hasAlert) return a.hasAlert ? -1 : 1;
+      return a.residentName.localeCompare(b.residentName);
     });
 
     res.json(dashboard);
   } catch (error) {
-    console.error('Error fetching nurse dashboard:', error);
+    console.error('Error fetching staff dashboard:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard.' });
   }
+});
+
+// Keep /nurse as alias so old bookmarks still work
+router.get('/nurse', authenticate, authorize('nurse', 'caregiver'), async (req, res) => {
+  // Delegate to unified handler
+  req.url = '/caregiver';
+  return router.handle(req, res);
 });
 
 // Get detailed adherence history for a specific resident
@@ -177,7 +113,7 @@ router.get('/resident/:residentId/history', authenticate, async (req, res) => {
       }
     });
 
-    if (!hasAccess && req.user.id !== residentId && req.user.role !== 'admin') {
+    if (!hasAccess && req.user.id !== residentId && req.user.role !== 'admin' && req.user.role !== 'nurse') {
       return res.status(403).json({ error: 'Not authorized to view this resident.' });
     }
 

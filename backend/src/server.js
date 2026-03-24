@@ -75,7 +75,9 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
   .then(() => {
     console.log('Database connected successfully.');
-    return sequelize.sync({ alter: true });
+    // Use sync() without alter to avoid data loss on restart
+    // The seed script (node src/seed.js) handles schema creation with force:true
+    return sequelize.sync();
   })
   .then(() => {
     httpServer.listen(PORT, () => {
